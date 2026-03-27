@@ -2,11 +2,12 @@ import { useState, useMemo } from 'react';
 import { PageTransition } from '../components/PageTransition';
 import { Camera, Tv, Plus, X, Check, Trash2, Calendar, LayoutGrid, Search, Play, Music } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LoadingScreen } from '../components/LoadingScreen';
 
 const PLATFORMS = ['Instagram', 'TikTok', 'YouTube', 'Twitter'];
 const STAGES = ['Ideation', 'To Shoot', 'Editing', 'Scheduled', 'Posted'];
 
-export default function Content({ content = [], dbActions, songs = [], releases = [] }) {
+export default function Content({ content = [], dbActions, songs = [], releases = [], isLoading }) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -90,8 +91,12 @@ export default function Content({ content = [], dbActions, songs = [], releases 
         </motion.div>
       </header>
 
-      {/* Overview Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+      {isLoading ? (
+        <LoadingScreen message="Syncing your content planner..." />
+      ) : (
+        <>
+          {/* Overview Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
         <div className="card" style={{ padding: '1.25rem', background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(255, 255, 255, 0.02))' }}>
            <h3 style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Planned</h3>
            <p style={{ margin: '0.5rem 0 0', fontSize: '1.8rem', fontWeight: '800' }}>{content.length}</p>
@@ -247,6 +252,8 @@ export default function Content({ content = [], dbActions, songs = [], releases 
           </motion.div>
         )}
       </AnimatePresence>
+    </>
+      )}
     </PageTransition>
   );
 }

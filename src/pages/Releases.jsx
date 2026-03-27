@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { PageTransition } from '../components/PageTransition';
 import { Calendar, Circle, Plus, Trash2, X, Check, Disc3, Music, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
+import { LoadingScreen } from '../components/LoadingScreen';
 const TAGS = ['All', 'Upcoming', 'Released'];
 
-export default function Releases({ releases = [], songs = [], dbActions }) {
+export default function Releases({ releases = [], songs = [], dbActions, isLoading }) {
   const [activeTab, setActiveTab] = useState('All');
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
   const [isManageTracksOpen, setIsManageTracksOpen] = useState(false);
@@ -188,7 +188,11 @@ export default function Releases({ releases = [], songs = [], dbActions }) {
         </motion.div>
       </header>
 
-      <div style={{ display: 'flex', gap: '0.8rem', overflowX: 'auto', paddingBottom: '0.8rem', marginBottom: '1rem', scrollbarWidth: 'none' }}>
+      {isLoading ? (
+        <LoadingScreen message="Loading your release schedule..." />
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: '0.8rem', overflowX: 'auto', paddingBottom: '0.8rem', marginBottom: '1rem', scrollbarWidth: 'none' }}>
         {TAGS.map((tab) => (
           <motion.div 
             key={tab}
@@ -405,6 +409,8 @@ export default function Releases({ releases = [], songs = [], dbActions }) {
           </motion.div>
         )}
       </AnimatePresence>
+    </>
+      )}
     </PageTransition>
   );
 }

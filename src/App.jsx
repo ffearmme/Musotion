@@ -21,6 +21,7 @@ function App() {
   // Real-time Firestore hooks
   const { 
     data: songsData, 
+    loading: songsLoading,
     addDocument: addSong, 
     updateDocument: updateSong, 
     deleteDocument: deleteSong 
@@ -28,6 +29,7 @@ function App() {
 
   const { 
     data: releasesData, 
+    loading: releasesLoading,
     addDocument: addRelease, 
     updateDocument: updateRelease, 
     deleteDocument: deleteRelease 
@@ -35,6 +37,7 @@ function App() {
 
   const { 
     data: contentData, 
+    loading: contentLoading,
     addDocument: addContent, 
     updateDocument: updateContent, 
     deleteDocument: deleteContent 
@@ -42,6 +45,7 @@ function App() {
 
   const { 
     data: notesData, 
+    loading: notesLoading,
     addDocument: addNote, 
     updateDocument: updateNote, 
     deleteDocument: deleteNote 
@@ -75,8 +79,8 @@ function App() {
             <Route path="/" element={
               <Songs 
                 songs={songsData} 
-                setSongs={setSongs} 
                 dbActions={songsActions}
+                isLoading={songsLoading}
               />
             } />
             <Route path="/releases" element={
@@ -84,6 +88,7 @@ function App() {
                 releases={releasesData} 
                 songs={songsData}
                 dbActions={{ add: addRelease, update: updateRelease, delete: deleteRelease }}
+                isLoading={releasesLoading}
               />
             } />
             <Route path="/content" element={
@@ -92,12 +97,14 @@ function App() {
                 songs={songsData} 
                 releases={releasesData}
                 dbActions={{ add: addContent, update: updateContent, delete: deleteContent }}
+                isLoading={contentLoading}
               />
             } />
             <Route path="/notes" element={
               <Notes 
                 notes={notesData}
                 dbActions={{ add: addNote, update: updateNote, delete: deleteNote }}
+                isLoading={notesLoading}
               />
             } />
           </Routes>

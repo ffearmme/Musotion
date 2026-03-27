@@ -2,10 +2,10 @@ import { useState, useMemo } from 'react';
 import { PageTransition } from '../components/PageTransition';
 import { Plus, Search, Music, X, Check, Trash2, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
+import { LoadingScreen } from '../components/LoadingScreen';
 const STAGES = ['All', 'Writing', 'Demo', 'Mixed', 'Mastered'];
 
-export default function Songs({ songs = [], dbActions }) {
+export default function Songs({ songs = [], dbActions, isLoading }) {
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -89,7 +89,11 @@ export default function Songs({ songs = [], dbActions }) {
         </motion.div>
       </header>
 
-      <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
+      {isLoading ? (
+        <LoadingScreen message="Retrieving your tracks..." />
+      ) : (
+        <>
+          <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
         <div style={{ position: 'absolute', left: '1rem', top: 0, bottom: 0, display: 'flex', alignItems: 'center', color: 'var(--text-secondary)', pointerEvents: 'none' }}>
           <Search size={18} />
         </div>
@@ -277,6 +281,8 @@ export default function Songs({ songs = [], dbActions }) {
           </motion.div>
         )}
       </AnimatePresence>
-    </PageTransition>
+    </>
+  )}
+</PageTransition>
   );
 }

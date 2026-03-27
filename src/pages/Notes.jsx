@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { PageTransition } from '../components/PageTransition';
 import { Search, Edit3, X, Check, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { LoadingScreen } from '../components/LoadingScreen';
 
 const INITIAL_NOTES = [
   { id: 1, title: 'Lyric Ideas for "Neon"', content: 'Walking through the empty streets, feeling the rhythm of the night. Neon signs flashing like a heartbeat in the dark.', tag: 'Lyrics', time: '2h ago' },
@@ -11,7 +12,7 @@ const INITIAL_NOTES = [
 
 const TAGS = ['All', 'Lyrics', 'Ideas', 'Business', 'Gear'];
 
-export default function Notes({ notes = [], dbActions }) {
+export default function Notes({ notes = [], dbActions, isLoading }) {
   const [activeTag, setActiveTag] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -82,7 +83,11 @@ export default function Notes({ notes = [], dbActions }) {
         </motion.div>
       </header>
 
-      <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
+      {isLoading ? (
+        <LoadingScreen message="Fetching your creative notes..." />
+      ) : (
+        <>
+          <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
         <div style={{ position: 'absolute', left: '1rem', top: 0, bottom: 0, display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
            <Search size={18} color="var(--text-secondary)" />
         </div>
@@ -245,6 +250,8 @@ export default function Notes({ notes = [], dbActions }) {
           </motion.div>
         )}
       </AnimatePresence>
+    </>
+      )}
     </PageTransition>
   );
 }
