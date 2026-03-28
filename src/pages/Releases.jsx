@@ -1,18 +1,79 @@
 import { useState } from 'react';
 import { PageTransition } from '../components/PageTransition';
-import { Calendar, Circle, Plus, Trash2, X, Check, Disc3, Music, CheckCircle2 } from 'lucide-react';
+import { Calendar, Circle, Plus, Trash2, X, Check, Disc3, Music, CheckCircle2, Rocket, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoadingScreen } from '../components/LoadingScreen';
 const TAGS = ['All', 'Upcoming', 'Released'];
 
-export default function Releases({ releases = [], songs = [], dbActions, isLoading }) {
+const ROLLOUT_TEMPLATE = [
+  { day: 1, title: 'Day 1: Content Creation Planning Day', notes: 'References of content. Cool/creative locations. Shoot for 60-90 min. 3-5 songs. 3-4 outfit variations.', platform: 'All Platforms' },
+  { day: 2, title: 'Day 2: The Shoot', notes: 'Take speaker for playback! Sing with it. Record whole song. Film full song visualizer (landscape).', platform: 'All Platforms' },
+  { day: 3, title: 'Day 3: Edit & Ecosystem', notes: 'Take TIME to edit. Check Linktree/Komi, Bio, Highlights, Pinned content. Check Spotify Bio.', platform: 'All Platforms' },
+  { day: 4, title: 'Day 4: Posting and Ads', notes: 'Start posting. Don’t boost.', platform: 'All Platforms' },
+  { day: 5, title: 'Day 5: Press and PR', notes: 'Use AI to research/write. Research who to send press release to and start sending.', platform: 'All Platforms' },
+  { day: 6, title: 'Day 6: Data Analysis and Shoot Plan', notes: 'What worked? NEW content shoot plan based on data!', platform: 'All Platforms' },
+  { day: 7, title: 'Day 7: Shoot Day 2', notes: 'Apply changes from data analysis.', platform: 'All Platforms' },
+  { day: 8, title: 'Day 8: Test New Features', notes: 'Go live on TikTok? Carousel of 10-15 pics telling a story. Look after people!', platform: 'All Platforms' },
+  { day: 9, title: 'Day 9: One to One', notes: 'Reach out to community directly. Talk about new release. "Not about me but we".', platform: 'All Platforms' },
+  { day: 10, title: 'Day 10: Playlists', notes: 'Drive traffic through my playlist. Goal: Spotify Radio.', platform: 'All Platforms' },
+  { day: 11, title: 'Day 11: Radio', notes: 'Find DJs looking for new artists. Use AI to find and reach out.', platform: 'All Platforms' },
+  { day: 12, title: 'Day 12: Content Day 3', notes: 'Do what is working. More landscape/long form.', platform: 'All Platforms' },
+  { day: 13, title: 'Day 13: Preparation Day', notes: 'Find best content. Upload long form to YT. Set alarm early!', platform: 'All Platforms' },
+  { day: 14, title: 'Day 14: RELEASE DAY (G-Day)', notes: 'Check everything. Post early on Reels. Over post stories! Go live. "New song TODAY".', platform: 'All Platforms' },
+  { day: 15, title: 'Day 15: Don’t Stop', notes: 'Go live again. Keep posting reels.', platform: 'All Platforms' },
+  { day: 16, title: 'Day 16-20: Refine the Machine', notes: 'Building the machine, not just a single. Figure out the flow. KEEP looking after people!', platform: 'All Platforms' }
+];
+
+export default function Releases({ releases = [], songs = [], content = [], dbActions, isLoading, contentActions }) {
   const [activeTab, setActiveTab] = useState('All');
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
   const [isManageTracksOpen, setIsManageTracksOpen] = useState(false);
   const [isSongPickerOpen, setIsSongPickerOpen] = useState(false);
+  const [isCreatorSongPickerOpen, setIsCreatorSongPickerOpen] = useState(false);
   const [selectedRelease, setSelectedRelease] = useState(null);
   const [editorData, setEditorData] = useState({ title: '', date: '', status: 'upcoming', tasks: [] });
   const [isEditingExisting, setIsEditingExisting] = useState(false);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const [showRolloutConfirm, setShowRolloutConfirm] = useState(false);
+  const [releaseToDeleteId, setReleaseToDeleteId] = useState(null);
+
+  const applyRolloutTemplate = () => {
+    if (!editorData.date) {
+      alert("Please set a release date first.");
+      return;
+    }
+    setShowRolloutConfirm(true);
+  };
+
+  const confirmAndGenerateRollout = async () => {
+    setIsGeneratingPlan(true);
+    setShowRolloutConfirm(false);
+    try {
+      const gDay = new Date(editorData.date);
+      
+      for (const item of ROLLOUT_TEMPLATE) {
+        const targetDate = new Date(gDay);
+        targetDate.setDate(gDay.getDate() - (14 - item.day));
+        const isoDate = targetDate.toISOString().split('T')[0];
+
+        await contentActions.add({
+          title: item.title,
+          notes: item.notes,
+          platform: item.platform,
+          date: isoDate,
+          stage: 'Ideation',
+          type: 'Rollout',
+          linkedId: selectedRelease?.id || null
+        });
+      }
+      setIsDetailsDrawerOpen(false);
+    } catch (err) {
+      console.error("Error applying rollout template:", err);
+      alert("Failed to generate rollout plan: " + err.message);
+    } finally {
+      setIsGeneratingPlan(false);
+    }
+  };
 
   const calculateReleaseStatus = (dateString) => {
     if (!dateString) return { label: 'Planning', status: 'planning', days: 0 };
@@ -112,6 +173,23 @@ export default function Releases({ releases = [], songs = [], dbActions, isLoadi
     setIsDetailsDrawerOpen(true);
   };
 
+  const handleCreateFromSong = (song) => {
+    setEditorData({ 
+      title: song.title, 
+      date: new Date().toISOString().split('T')[0], 
+      status: 'upcoming',
+      tracks: [{ id: song.id, title: song.title, duration: '--' }],
+      tasks: [
+        { id: `t${Date.now()}1`, text: 'Mixes', completed: false },
+        { id: `t${Date.now()}2`, text: 'Cover Art', completed: false },
+        { id: `t${Date.now()}3`, text: 'Distribution', completed: false }
+      ]
+    });
+    setIsEditingExisting(false);
+    setIsCreatorSongPickerOpen(false);
+    setIsDetailsDrawerOpen(true);
+  };
+
   const handleOpenEdit = (release) => {
     setEditorData({ ...release });
     setSelectedRelease(release);
@@ -147,7 +225,7 @@ export default function Releases({ releases = [], songs = [], dbActions, isLoadi
       } else {
         await dbActions.add({
           ...updatedFields,
-          tracks: []
+          tracks: editorData.tracks || []
         });
       }
     } catch (err) {
@@ -156,14 +234,22 @@ export default function Releases({ releases = [], songs = [], dbActions, isLoadi
     }
   };
 
-  const deleteRelease = async (id) => {
-    if (window.confirm('Are you sure you want to delete this release?')) {
-        try {
-            await dbActions.delete(id);
-        } catch (err) {
-            console.error("Error deleting release:", err);
-            alert('Failed to delete release.');
-        }
+  const deleteRelease = async () => {
+    const id = releaseToDeleteId;
+    if (!id) return;
+
+    try {
+      // Find and delete linked content posts (Cascading Deletion)
+      const linkedPosts = content.filter(p => p.linkedId === id);
+      for (const post of linkedPosts) {
+        await contentActions.remove(post.id);
+      }
+
+      await dbActions.delete(id);
+      setReleaseToDeleteId(null);
+    } catch (err) {
+      console.error("Error deleting release:", err);
+      alert('Failed to delete release.');
     }
   };
 
@@ -179,13 +265,22 @@ export default function Releases({ releases = [], songs = [], dbActions, isLoadi
     <PageTransition>
       <header className="page-header">
         <h1 className="page-title">Releases</h1>
-        <motion.div 
-          whileTap={{ scale: 0.9 }}
-          onClick={handleOpenCreate}
-          style={{ width: '40px', height: '40px', borderRadius: '20px', background: 'var(--accent-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', cursor: 'pointer' }}
-        >
-          <Plus size={20} />
-        </motion.div>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <motion.div 
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setIsCreatorSongPickerOpen(true)}
+            style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--surface-highlight)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.05)' }}
+          >
+            <Music size={20} />
+          </motion.div>
+          <motion.div 
+            whileTap={{ scale: 0.9 }}
+            onClick={handleOpenCreate}
+            style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'var(--accent-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', cursor: 'pointer', boxShadow: '0 4px 12px var(--accent-glow)' }}
+          >
+            <Plus size={20} />
+          </motion.div>
+        </div>
       </header>
 
       {isLoading ? (
@@ -272,20 +367,40 @@ export default function Releases({ releases = [], songs = [], dbActions, isLoadi
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
-                  <button 
-                    onClick={() => { setSelectedRelease(release); setIsManageTracksOpen(true); }}
-                    style={{ flex: 1, background: 'var(--surface-highlight)', border: 'none', padding: '0.7rem', borderRadius: '12px', color: 'white', fontWeight: '600', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer' }}
-                  >
-                    <Disc3 size={16} /> Manage Tracks
-                  </button>
-                  <button 
-                    onClick={() => deleteRelease(release.id)}
-                    style={{ width: '48px', background: 'rgba(239, 68, 68, 0.05)', border: 'none', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', cursor: 'pointer' }}
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
+                {releaseToDeleteId === release.id ? (
+                   <motion.div 
+                     initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+                     style={{ display: 'flex', gap: '0.5rem', flex: 1, marginTop: '1.25rem' }}
+                   >
+                     <button 
+                       onClick={() => setReleaseToDeleteId(null)}
+                       style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: 'none', padding: '0.75rem', borderRadius: '12px', color: 'white', fontWeight: '700' }}
+                     >
+                       No, Cancel
+                     </button>
+                     <button 
+                       onClick={deleteRelease}
+                       style={{ flex: 1, background: '#ef4444', border: 'none', padding: '0.75rem', borderRadius: '12px', color: 'white', fontWeight: '800', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)' }}
+                     >
+                       Yes, Delete All
+                     </button>
+                   </motion.div>
+                 ) : (
+                   <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
+                    <button 
+                      onClick={() => { setSelectedRelease(release); setIsManageTracksOpen(true); }}
+                      style={{ flex: 1, background: 'var(--surface-highlight)', border: 'none', padding: '0.7rem', borderRadius: '12px', color: 'white', fontWeight: '600', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer' }}
+                    >
+                      <Disc3 size={16} /> Manage Tracks
+                    </button>
+                    <button 
+                      onClick={() => setReleaseToDeleteId(release.id)}
+                      style={{ width: '48px', background: 'rgba(239, 68, 68, 0.05)', border: 'none', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444', cursor: 'pointer' }}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                 )}
               </motion.div>
             );
           })}
@@ -321,6 +436,60 @@ export default function Releases({ releases = [], songs = [], dbActions, isLoadi
                    style={{ background: 'var(--surface-color)', border: 'none', borderRadius: '12px', padding: '1rem', color: 'white', colorScheme: 'dark', outline: 'none' }}
                 />
               </div>
+
+              {isEditingExisting && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  {!showRolloutConfirm ? (
+                    <button 
+                      onClick={applyRolloutTemplate}
+                      disabled={isGeneratingPlan}
+                      style={{ 
+                        background: 'rgba(139, 92, 246, 0.1)', 
+                        border: '1px solid rgba(139, 92, 246, 0.2)', 
+                        padding: '1rem', 
+                        borderRadius: '16px', 
+                        color: 'var(--accent-color)', 
+                        fontWeight: '800', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        gap: '0.75rem',
+                        cursor: isGeneratingPlan ? 'not-allowed' : 'pointer',
+                        opacity: isGeneratingPlan ? 0.6 : 1,
+                        fontFamily: 'Outfit',
+                        fontSize: '1rem',
+                        width: '100%'
+                      }}
+                    >
+                      <Rocket size={20} />
+                      <span>{isGeneratingPlan ? 'Generating Plan...' : 'Apply 14-Day Rollout Plan'}</span>
+                    </button>
+                  ) : (
+                    <motion.div 
+                      initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                      style={{ background: 'rgba(139, 92, 246, 0.15)', padding: '1.25rem', borderRadius: '20px', border: '1px solid rgba(139, 92, 246, 0.3)', textAlign: 'center' }}
+                    >
+                      <p style={{ color: 'var(--accent-color)', fontWeight: '700', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                        Auto-generate 16 content posts based on your release date?
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                        <button 
+                          onClick={() => setShowRolloutConfirm(false)}
+                          style={{ background: 'rgba(255,255,255,0.05)', border: 'none', padding: '0.75rem', borderRadius: '12px', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          onClick={confirmAndGenerateRollout}
+                          style={{ background: 'var(--accent-color)', border: 'none', padding: '0.75rem', borderRadius: '12px', color: 'white', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 12px var(--accent-glow)' }}
+                        >
+                          Yes, Do It
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              )}
 
                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -406,6 +575,52 @@ export default function Releases({ releases = [], songs = [], dbActions, isLoadi
                 </motion.div>
               )}
             </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* GLOBAL SONG PICKER (To Create a new release from a song) */}
+      <AnimatePresence>
+        {isCreatorSongPickerOpen && (
+          <motion.div 
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--bg-color)', zIndex: 1200, padding: '1.5rem', display: 'flex', flexDirection: 'column' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2.5rem' }}>
+              <button 
+                onClick={() => setIsCreatorSongPickerOpen(false)} 
+                style={{ background: 'rgba(255,255,255,0.05)', border: 'none', width: '40px', height: '40px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}
+              >
+                <X size={24}/>
+              </button>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.5rem', fontFamily: 'Outfit' }}>Turn Song to Release</h2>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Select a song to start a new campaign</p>
+              </div>
+            </div>
+            
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {songs.map(song => (
+                <motion.div 
+                  key={song.id} 
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleCreateFromSong(song)} 
+                  className="card"
+                  style={{ padding: '1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <div>
+                    <h4 style={{ margin: 0 }}>{song.title}</h4>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{song.stage}</p>
+                  </div>
+                  <ChevronRight size={20} color="var(--text-secondary)" />
+                </motion.div>
+              ))}
+              {songs.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '4rem 1rem', opacity: 0.4 }}>
+                  <Music size={48} style={{ margin: '0 auto 1rem' }} />
+                  <p>No songs found in your library.</p>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

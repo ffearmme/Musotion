@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Routes, Route, useLocation, Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Music, Disc3, Video, StickyNote } from 'lucide-react';
+import { Music, Disc3, Video, StickyNote, Calendar, LayoutDashboard } from 'lucide-react';
 import Songs from './pages/Songs';
 import Releases from './pages/Releases';
 import ContentPage from './pages/Content';
 import Notes from './pages/Notes';
+import Today from './pages/Today';
 import { useCollection } from './hooks/useFirestore';
 
 // --- INITIAL DATA (Used as fallbacks/reference) ---
@@ -43,6 +44,13 @@ function App() {
     deleteDocument: deleteContent 
   } = useCollection('content');
 
+  // Unified State Management
+  const contentActions = {
+    add: addContent,
+    update: updateContent,
+    remove: deleteContent
+  };
+
   const { 
     data: notesData, 
     loading: notesLoading,
@@ -58,9 +66,10 @@ function App() {
   };
 
   const navItems = [
-    { path: '/', label: 'Songs', icon: Music },
+    { path: '/', label: 'Today', icon: LayoutDashboard },
+    { path: '/songs', label: 'Songs', icon: Music },
     { path: '/releases', label: 'Releases', icon: Disc3 },
-    { path: '/content', label: 'Content', icon: Video },
+    { path: '/content', label: 'Calendar', icon: Calendar },
     { path: '/notes', label: 'Notes', icon: StickyNote },
   ];
 
@@ -77,6 +86,16 @@ function App() {
         <AnimatePresence mode="wait">
           <Routes location={location} key={location.pathname}>
             <Route path="/" element={
+              <Today 
+                songs={songsData}
+                releases={releasesData}
+                content={contentData}
+                notes={notesData}
+                dbActions={contentActions}
+                isLoading={songsLoading || releasesLoading || contentLoading || notesLoading}
+              />
+            } />
+            <Route path="/songs" element={
               <Songs 
                 songs={songsData} 
                 dbActions={songsActions}
@@ -87,7 +106,9 @@ function App() {
               <Releases 
                 releases={releasesData} 
                 songs={songsData}
+                content={contentData}
                 dbActions={{ add: addRelease, update: updateRelease, delete: deleteRelease }}
+                contentActions={contentActions}
                 isLoading={releasesLoading}
               />
             } />
@@ -96,7 +117,7 @@ function App() {
                 content={contentData} 
                 songs={songsData} 
                 releases={releasesData}
-                dbActions={{ add: addContent, update: updateContent, delete: deleteContent }}
+                dbActions={contentActions}
                 isLoading={contentLoading}
               />
             } />
