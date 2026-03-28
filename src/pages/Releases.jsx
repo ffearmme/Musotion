@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PageTransition } from '../components/PageTransition';
-import { Calendar, Circle, Plus, Trash2, X, Check, Disc3, Music, CheckCircle2, Rocket, ChevronRight } from 'lucide-react';
+import { Calendar, Circle, Plus, Trash2, X, Check, Disc3, Music, CheckCircle2, Rocket, ChevronRight, Link, ExternalLink, Smile, Frown, BarChart3, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoadingScreen } from '../components/LoadingScreen';
 const TAGS = ['All', 'Upcoming', 'Released'];
@@ -31,7 +31,10 @@ export default function Releases({ releases = [], songs = [], content = [], dbAc
   const [isSongPickerOpen, setIsSongPickerOpen] = useState(false);
   const [isCreatorSongPickerOpen, setIsCreatorSongPickerOpen] = useState(false);
   const [selectedRelease, setSelectedRelease] = useState(null);
-  const [editorData, setEditorData] = useState({ title: '', date: '', status: 'upcoming', tasks: [] });
+  const [detailTab, setDetailTab] = useState('Planning'); // Planning, Assets, Retrospective
+  const [editorData, setEditorData] = useState({ 
+    title: '', date: '', status: 'upcoming', tasks: [], assets: [], retrospective: { worked: '', didnt: '', stats: '' } 
+  });
   const [isEditingExisting, setIsEditingExisting] = useState(false);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [showRolloutConfirm, setShowRolloutConfirm] = useState(false);
@@ -167,10 +170,13 @@ export default function Releases({ releases = [], songs = [], content = [], dbAc
         { id: `t${Date.now()}1`, text: 'Mixes', completed: false },
         { id: `t${Date.now()}2`, text: 'Cover Art', completed: false },
         { id: `t${Date.now()}3`, text: 'Distribution', completed: false }
-      ]
+      ],
+      assets: [],
+      retrospective: { worked: '', didnt: '', stats: '' }
     });
     setIsEditingExisting(false);
     setIsDetailsDrawerOpen(true);
+    setDetailTab('Planning');
   };
 
   const handleCreateFromSong = (song) => {
@@ -183,18 +189,26 @@ export default function Releases({ releases = [], songs = [], content = [], dbAc
         { id: `t${Date.now()}1`, text: 'Mixes', completed: false },
         { id: `t${Date.now()}2`, text: 'Cover Art', completed: false },
         { id: `t${Date.now()}3`, text: 'Distribution', completed: false }
-      ]
+      ],
+      assets: [],
+      retrospective: { worked: '', didnt: '', stats: '' }
     });
     setIsEditingExisting(false);
     setIsCreatorSongPickerOpen(false);
     setIsDetailsDrawerOpen(true);
+    setDetailTab('Planning');
   };
 
   const handleOpenEdit = (release) => {
-    setEditorData({ ...release });
+    setEditorData({ 
+      assets: [], 
+      retrospective: { worked: '', didnt: '', stats: '' },
+      ...release 
+    });
     setSelectedRelease(release);
     setIsEditingExisting(true);
     setIsDetailsDrawerOpen(true);
+    setDetailTab('Planning');
   };
 
   const handleSaveDetails = async () => {
@@ -340,6 +354,20 @@ export default function Releases({ releases = [], songs = [], content = [], dbAc
                   </div>
                 </div>
 
+                {release.assets && release.assets.length > 0 && (
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+                    {release.assets.map(asset => (
+                      <a 
+                        key={asset.id} href={asset.url} target="_blank" rel="noopener noreferrer" 
+                        style={{ padding: '0.35rem 0.75rem', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.15)', color: '#3b82f6', fontSize: '0.7rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                         <Link size={12} /> {asset.label}
+                      </a>
+                    ))}
+                  </div>
+                )}
+
                 <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '16px', padding: '1rem', border: '1px solid rgba(255,255,255,0.03)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <span style={{ fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)' }}>Launch Checklist</span>
@@ -420,94 +448,196 @@ export default function Releases({ releases = [], songs = [], content = [], dbAc
               <button onClick={handleSaveDetails} style={{ background: 'var(--accent-color)', border: 'none', width: '40px', height: '40px', borderRadius: '20px', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px var(--accent-glow)' }}><Check size={20}/></button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', flex: 1, overflowY: 'auto' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>TITLE</label>
-                <input 
-                  type="text" value={editorData.title} onChange={(e) => setEditorData({...editorData, title: e.target.value})}
-                  style={{ background: 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', fontSize: '1.5rem', color: 'white', outline: 'none' }}
-                />
-              </div>
+            <div style={{ display: 'flex', background: 'var(--surface-color)', padding: '0.4rem', borderRadius: '16px', gap: '0.5rem', marginBottom: '2rem' }}>
+              {['Planning', 'Assets', 'Retrospective'].map(t => {
+                if (t === 'Retrospective' && editorData.status !== 'released') return null;
+                return (
+                  <button 
+                    key={t} onClick={() => setDetailTab(t)}
+                    style={{ flex: 1, padding: '0.6rem', background: detailTab === t ? 'var(--surface-highlight)' : 'transparent', border: 'none', borderRadius: '12px', color: detailTab === t ? 'white' : 'var(--text-secondary)', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                  >
+                    {t}
+                  </button>
+                )
+              })}
+            </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>RELEASE DATE</label>
-                <input 
-                   type="date" value={editorData.date} onChange={(e) => setEditorData({...editorData, date: e.target.value})}
-                   style={{ background: 'var(--surface-color)', border: 'none', borderRadius: '12px', padding: '1rem', color: 'white', colorScheme: 'dark', outline: 'none' }}
-                />
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', flex: 1, overflowY: 'auto', paddingBottom: '2rem' }}>
+              {detailTab === 'Planning' && (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>TITLE</label>
+                    <input 
+                      type="text" value={editorData.title} onChange={(e) => setEditorData({...editorData, title: e.target.value})}
+                      style={{ background: 'transparent', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', fontSize: '1.5rem', color: 'white', outline: 'none' }}
+                    />
+                  </div>
 
-              {isEditingExisting && (
-                <div style={{ marginTop: '0.5rem' }}>
-                  {!showRolloutConfirm ? (
-                    <button 
-                      onClick={applyRolloutTemplate}
-                      disabled={isGeneratingPlan}
-                      style={{ 
-                        background: 'rgba(139, 92, 246, 0.1)', 
-                        border: '1px solid rgba(139, 92, 246, 0.2)', 
-                        padding: '1rem', 
-                        borderRadius: '16px', 
-                        color: 'var(--accent-color)', 
-                        fontWeight: '800', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        gap: '0.75rem',
-                        cursor: isGeneratingPlan ? 'not-allowed' : 'pointer',
-                        opacity: isGeneratingPlan ? 0.6 : 1,
-                        fontFamily: 'Outfit',
-                        fontSize: '1rem',
-                        width: '100%'
-                      }}
-                    >
-                      <Rocket size={20} />
-                      <span>{isGeneratingPlan ? 'Generating Plan...' : 'Apply 14-Day Rollout Plan'}</span>
-                    </button>
-                  ) : (
-                    <motion.div 
-                      initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                      style={{ background: 'rgba(139, 92, 246, 0.15)', padding: '1.25rem', borderRadius: '20px', border: '1px solid rgba(139, 92, 246, 0.3)', textAlign: 'center' }}
-                    >
-                      <p style={{ color: 'var(--accent-color)', fontWeight: '700', fontSize: '0.9rem', marginBottom: '1rem' }}>
-                        Auto-generate 16 content posts based on your release date?
-                      </p>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>RELEASE DATE</label>
+                    <input 
+                       type="date" value={editorData.date} onChange={(e) => setEditorData({...editorData, date: e.target.value})}
+                       style={{ background: 'var(--surface-color)', border: 'none', borderRadius: '12px', padding: '1rem', color: 'white', colorScheme: 'dark', outline: 'none' }}
+                    />
+                  </div>
+
+                  {isEditingExisting && (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      {!showRolloutConfirm ? (
                         <button 
-                          onClick={() => setShowRolloutConfirm(false)}
-                          style={{ background: 'rgba(255,255,255,0.05)', border: 'none', padding: '0.75rem', borderRadius: '12px', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                          onClick={applyRolloutTemplate}
+                          disabled={isGeneratingPlan}
+                          style={{ 
+                            background: 'rgba(139, 92, 246, 0.1)', 
+                            border: '1px solid rgba(139, 92, 246, 0.2)', 
+                            padding: '1rem', 
+                            borderRadius: '16px', 
+                            color: 'var(--accent-color)', 
+                            fontWeight: '800', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            gap: '0.75rem',
+                            cursor: isGeneratingPlan ? 'not-allowed' : 'pointer',
+                            opacity: isGeneratingPlan ? 0.6 : 1,
+                            fontFamily: 'Outfit',
+                            fontSize: '1rem',
+                            width: '100%'
+                          }}
                         >
-                          Cancel
+                          <Rocket size={20} />
+                          <span>{isGeneratingPlan ? 'Generating Plan...' : 'Apply 14-Day Rollout Plan'}</span>
                         </button>
-                        <button 
-                          onClick={confirmAndGenerateRollout}
-                          style={{ background: 'var(--accent-color)', border: 'none', padding: '0.75rem', borderRadius: '12px', color: 'white', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 12px var(--accent-glow)' }}
+                      ) : (
+                        <motion.div 
+                          initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                          style={{ background: 'rgba(139, 92, 246, 0.15)', padding: '1.25rem', borderRadius: '20px', border: '1px solid rgba(139, 92, 246, 0.3)', textAlign: 'center' }}
                         >
-                          Yes, Do It
-                        </button>
-                      </div>
-                    </motion.div>
+                          <p style={{ color: 'var(--accent-color)', fontWeight: '700', fontSize: '0.9rem', marginBottom: '1rem' }}>
+                            Auto-generate 16 content posts based on your release date?
+                          </p>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                            <button 
+                              onClick={() => setShowRolloutConfirm(false)}
+                              style={{ background: 'rgba(255,255,255,0.05)', border: 'none', padding: '0.75rem', borderRadius: '12px', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                            <button 
+                              onClick={confirmAndGenerateRollout}
+                              style={{ background: 'var(--accent-color)', border: 'none', padding: '0.75rem', borderRadius: '12px', color: 'white', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 12px var(--accent-glow)' }}
+                            >
+                              Yes, Do It
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
                   )}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>LAUNCH CHECKLIST</label>
+                      <button onClick={addEditorTask} style={{ background: 'var(--surface-highlight)', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', color: 'white', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>+ Add Item</button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {editorData.tasks.map(task => (
+                        <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: '12px' }}>
+                          <input 
+                            type="text" value={task.text} onChange={(e) => updateEditorTaskText(task.id, e.target.value)}
+                            style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', fontSize: '0.9rem', outline: 'none' }}
+                          />
+                          <button onClick={() => removeEditorTask(task.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={16}/></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {detailTab === 'Assets' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>ASSET VAULT</label>
+                      <button 
+                        onClick={() => setEditorData({...editorData, assets: [...editorData.assets, { id: Date.now(), label: '', url: '' }]})}
+                        style={{ padding: '0.4rem 0.8rem', borderRadius: '12px', background: 'var(--surface-highlight)', border: 'none', color: 'white', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}
+                      >+ Add Link</button>
+                   </div>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {editorData.assets.map((asset, i) => (
+                        <div key={asset.id} style={{ display: 'flex', gap: '0.75rem', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '16px', alignItems: 'center' }}>
+                           <Link size={18} color="var(--accent-color)" />
+                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                              <input 
+                                placeholder="Label (e.g. Mastered WAV)" value={asset.label} 
+                                onChange={(e) => {
+                                  const n = [...editorData.assets];
+                                  n[i].label = e.target.value;
+                                  setEditorData({...editorData, assets: n});
+                                }}
+                                style={{ background: 'transparent', border: 'none', fontSize: '0.9rem', color: 'white', outline: 'none', fontWeight: '700' }}
+                              />
+                              <input 
+                                placeholder="URL (e.g. Dropbox link)" value={asset.url} 
+                                onChange={(e) => {
+                                  const n = [...editorData.assets];
+                                  n[i].url = e.target.value;
+                                  setEditorData({...editorData, assets: n});
+                                }}
+                                style={{ background: 'transparent', border: 'none', fontSize: '0.8rem', color: 'var(--text-secondary)', outline: 'none' }}
+                              />
+                           </div>
+                           <button 
+                            onClick={() => setEditorData({...editorData, assets: editorData.assets.filter(a => a.id !== asset.id)})}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', opacity: 0.6 }}><Trash2 size={16}/></button>
+                        </div>
+                      ))}
+                      {editorData.assets.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', padding: '2rem' }}>No assets linked yet.</p>}
+                   </div>
                 </div>
               )}
 
-               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>LAUNCH CHECKLIST</label>
-                  <button onClick={addEditorTask} style={{ background: 'var(--surface-highlight)', border: 'none', padding: '0.4rem 0.8rem', borderRadius: '20px', color: 'white', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}>+ Add Item</button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {editorData.tasks.map(task => (
-                    <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'rgba(255,255,255,0.03)', padding: '0.75rem', borderRadius: '12px' }}>
-                      <input 
-                        type="text" value={task.text} onChange={(e) => updateEditorTaskText(task.id, e.target.value)}
-                        style={{ flex: 1, background: 'transparent', border: 'none', color: 'white', fontSize: '0.9rem', outline: 'none' }}
+              {detailTab === 'Retrospective' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Smile size={18} color="#10b981" />
+                        <label style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: '800' }}>WHAT WORKED WELL?</label>
+                      </div>
+                      <textarea 
+                        value={editorData.retrospective?.worked} 
+                        onChange={(e) => setEditorData({...editorData, retrospective: {...editorData.retrospective, worked: e.target.value}})}
+                        placeholder="e.g. TikTok countdown drove most traffic..."
+                        style={{ background: 'var(--surface-color)', border: 'none', borderRadius: '16px', padding: '1rem', color: 'white', minHeight: '100px', outline: 'none', resize: 'none' }}
                       />
-                      <button onClick={() => removeEditorTask(task.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={16}/></button>
-                    </div>
-                  ))}
+                   </div>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Frown size={18} color="#ef4444" />
+                        <label style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: '800' }}>WHAT DIDN'T WORK?</label>
+                      </div>
+                      <textarea 
+                        value={editorData.retrospective?.didnt} 
+                        onChange={(e) => setEditorData({...editorData, retrospective: {...editorData.retrospective, didnt: e.target.value}})}
+                        placeholder="e.g. Email blast had low open rates..."
+                        style={{ background: 'var(--surface-color)', border: 'none', borderRadius: '16px', padding: '1rem', color: 'white', minHeight: '100px', outline: 'none', resize: 'none' }}
+                      />
+                   </div>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <BarChart3 size={18} color="var(--accent-color)" />
+                        <label style={{ fontSize: '0.8rem', color: 'var(--accent-color)', fontWeight: '800' }}>KEY STATS & NUMBERS</label>
+                      </div>
+                      <textarea 
+                        value={editorData.retrospective?.stats} 
+                        onChange={(e) => setEditorData({...editorData, retrospective: {...editorData.retrospective, stats: e.target.value}})}
+                        placeholder="e.g. 50k Spotify Streams in Week 1..."
+                        style={{ background: 'var(--surface-color)', border: 'none', borderRadius: '16px', padding: '1rem', color: 'white', minHeight: '100px', outline: 'none', resize: 'none' }}
+                      />
+                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -618,6 +748,90 @@ export default function Releases({ releases = [], songs = [], content = [], dbAc
                 <div style={{ textAlign: 'center', padding: '4rem 1rem', opacity: 0.4 }}>
                   <Music size={48} style={{ margin: '0 auto 1rem' }} />
                   <p>No songs found in your library.</p>
+                </div>
+              )}
+
+              {detailTab === 'Assets' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>ASSET VAULT</label>
+                      <button 
+                        onClick={() => setEditorData({...editorData, assets: [...editorData.assets, { id: Date.now(), label: '', url: '' }]})}
+                        style={{ padding: '0.4rem 0.8rem', borderRadius: '12px', background: 'var(--surface-highlight)', border: 'none', color: 'white', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer' }}
+                      >+ Add Link</button>
+                   </div>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {editorData.assets.map((asset, i) => (
+                        <div key={asset.id} style={{ display: 'flex', gap: '0.75rem', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '16px', alignItems: 'center' }}>
+                           <Link size={18} color="var(--accent-color)" />
+                           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                              <input 
+                                placeholder="Label (e.g. Mastered WAV)" value={asset.label} 
+                                onChange={(e) => {
+                                  const n = [...editorData.assets];
+                                  n[i].label = e.target.value;
+                                  setEditorData({...editorData, assets: n});
+                                }}
+                                style={{ background: 'transparent', border: 'none', fontSize: '0.9rem', color: 'white', outline: 'none', fontWeight: '700' }}
+                              />
+                              <input 
+                                placeholder="URL (e.g. Dropbox link)" value={asset.url} 
+                                onChange={(e) => {
+                                  const n = [...editorData.assets];
+                                  n[i].url = e.target.value;
+                                  setEditorData({...editorData, assets: n});
+                                }}
+                                style={{ background: 'transparent', border: 'none', fontSize: '0.8rem', color: 'var(--text-secondary)', outline: 'none' }}
+                              />
+                           </div>
+                           <button 
+                            onClick={() => setEditorData({...editorData, assets: editorData.assets.filter(a => a.id !== asset.id)})}
+                            style={{ background: 'none', border: 'none', color: '#ef4444', opacity: 0.6 }}><Trash2 size={16}/></button>
+                        </div>
+                      ))}
+                      {editorData.assets.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', padding: '2rem' }}>No assets linked yet.</p>}
+                   </div>
+                </div>
+              )}
+
+              {detailTab === 'Retrospective' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Smile size={18} color="#10b981" />
+                        <label style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: '800' }}>WHAT WORKED WELL?</label>
+                      </div>
+                      <textarea 
+                        value={editorData.retrospective?.worked} 
+                        onChange={(e) => setEditorData({...editorData, retrospective: {...editorData.retrospective, worked: e.target.value}})}
+                        placeholder="e.g. TikTok countdown drove most traffic..."
+                        style={{ background: 'var(--surface-color)', border: 'none', borderRadius: '16px', padding: '1rem', color: 'white', minHeight: '100px', outline: 'none', resize: 'none' }}
+                      />
+                   </div>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Frown size={18} color="#ef4444" />
+                        <label style={{ fontSize: '0.8rem', color: '#ef4444', fontWeight: '800' }}>WHAT DIDN'T WORK?</label>
+                      </div>
+                      <textarea 
+                        value={editorData.retrospective?.didnt} 
+                        onChange={(e) => setEditorData({...editorData, retrospective: {...editorData.retrospective, didnt: e.target.value}})}
+                        placeholder="e.g. Email blast had low open rates..."
+                        style={{ background: 'var(--surface-color)', border: 'none', borderRadius: '16px', padding: '1rem', color: 'white', minHeight: '100px', outline: 'none', resize: 'none' }}
+                      />
+                   </div>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <BarChart3 size={18} color="var(--accent-color)" />
+                        <label style={{ fontSize: '0.8rem', color: 'var(--accent-color)', fontWeight: '800' }}>KEY STATS & NUMBERS</label>
+                      </div>
+                      <textarea 
+                        value={editorData.retrospective?.stats} 
+                        onChange={(e) => setEditorData({...editorData, retrospective: {...editorData.retrospective, stats: e.target.value}})}
+                        placeholder="e.g. 50k Spotify Streams in Week 1..."
+                        style={{ background: 'var(--surface-color)', border: 'none', borderRadius: '16px', padding: '1rem', color: 'white', minHeight: '100px', outline: 'none', resize: 'none' }}
+                      />
+                   </div>
                 </div>
               )}
             </div>
